@@ -497,12 +497,22 @@ void luaV_finishOp (lua_State *L) {
 #define KBx(i)  \
   (k + (GETARG_Bx(i) != 0 ? GETARG_Bx(i) - 1 : GETARG_Ax(*ci->u.l.savedpc++)))
 
+#define PATCH_CHECK() \
+  { if (code != cl->p->code) { \
+      int offset = ci->u.l.savedpc - code; \
+      if (0 <= offset && offset < cl->p->sizecode && \
+          !memcmp(code, cl->p->code, offset * sizeof(Instruction))) { \
+      ci->u.l.savedpc = cl->p->code + offset; \
+      goto newframe; \
+    } \
+  } }
 
 /* execute a jump instruction */
 #define dojump(ci,i,e) \
   { int a = GETARG_A(i); \
     if (a > 0) luaF_close(L, ci->u.l.base + a - 1); \
-    ci->u.l.savedpc += GETARG_sBx(i) + e; }
+    ci->u.l.savedpc += GETARG_sBx(i) + e; \
+    PATCH_CHECK(); } 
 
 /* for test instructions, execute the jump instruction that follows it */
 #define donextjump(ci)	{ i = *ci->u.l.savedpc; dojump(ci, i, 1); }
@@ -536,11 +546,15 @@ void luaV_execute (lua_State *L) {
   LClosure *cl;
   TValue *k;
   StkId base;
+  Instruction *code;
+  Proto **protos;
  newframe:  /* reentry point when frame changes (call/return) */
   lua_assert(ci == L->ci);
   cl = clLvalue(ci->func);
   k = cl->p->k;
   base = ci->u.l.base;
+  code = cl->p->code;
+  protos = cl->p->p;
   /* main loop of interpreter */
   for (;;) {
     Instruction i = *(ci->u.l.savedpc++);
@@ -773,6 +787,7 @@ void luaV_execute (lua_State *L) {
           ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
           setnvalue(ra, idx);  /* update internal index... */
           setnvalue(ra+3, idx);  /* ...and external index */
+          PATCH_CHECK();
         }
       )
       vmcase(OP_FORPREP,
@@ -787,6 +802,7 @@ void luaV_execute (lua_State *L) {
           luaG_runerror(L, LUA_QL("for") " step must be a number");
         setnvalue(ra, luai_numsub(L, nvalue(ra), nvalue(pstep)));
         ci->u.l.savedpc += GETARG_sBx(i);
+        PATCH_CHECK();
       )
       vmcasenb(OP_TFORCALL,
         StkId cb = ra + 3;  /* call base */
@@ -805,7 +821,8 @@ void luaV_execute (lua_State *L) {
         l_tforloop:
         if (!ttisnil(ra + 1)) {  /* continue loop? */
           setobjs2s(L, ra, ra + 1);  /* save control variable */
-           ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
+          ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
+	  PATCH_CHECK();
         }
       )
       vmcase(OP_SETLIST,
@@ -831,7 +848,7 @@ void luaV_execute (lua_State *L) {
         L->top = ci->top;  /* correct top (in case of previous open call) */
       )
       vmcase(OP_CLOSURE,
-        Proto *p = cl->p->p[GETARG_Bx(i)];
+        Proto *p = protos[GETARG_Bx(i)];
         Closure *ncl = getcached(p, cl->upvals, base);  /* cached closure */
         if (ncl == NULL)  /* no match? */
           pushclosure(L, p, cl->upvals, base, ra);  /* create a new one */
