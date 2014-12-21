@@ -21,7 +21,7 @@ SYSLIBS=
 
 MYCFLAGS=
 MYLDFLAGS=
-MYLIBS=
+MYLIBS=-lpthread -lzmq
 MYOBJS=
 
 # == END OF USER SETTINGS -- NO NEED TO CHANGE ANYTHING BELOW THIS LINE =======
@@ -184,4 +184,6 @@ lvm.o: lvm.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
  lzio.h lmem.h ldo.h lfunc.h lgc.h lopcodes.h lstring.h ltable.h lvm.h
 lzio.o: lzio.c lua.h luaconf.h llimits.h lmem.h lstate.h lobject.h ltm.h \
  lzio.h
+lpatch.o: lua.h lualib.h lstate.h
 
+# (end of Makefile)
