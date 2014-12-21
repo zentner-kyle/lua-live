@@ -423,6 +423,10 @@ LUA_API lua_State *lua_tothread (lua_State *L, int idx) {
 }
 
 
+LUA_API LClosure *lua_tolclosure (lua_State *L, int idx) {
+  StkId o = index2addr(L, idx);
+  return (!ttisLclosure(o)) ? NULL : (LClosure *) clLvalue(o);
+}
 LUA_API const void *lua_topointer (lua_State *L, int idx) {
   StkId o = index2addr(L, idx);
   switch (ttype(o)) {
@@ -571,6 +575,12 @@ LUA_API int lua_pushthread (lua_State *L) {
   return (G(L)->mainthread == L);
 }
 
+LUA_API void lua_pushlclosure (lua_State *L, LClosure *c) {
+  lua_lock(L);
+  setclLvalue(L, L->top, c);
+  api_incr_top(L);
+  lua_unlock(L);
+}
 
 
 /*

@@ -97,6 +97,7 @@
 
 #endif				/* } */
 
+#include "lpatch.h"
 
 
 
@@ -568,6 +569,7 @@ static int pmain (lua_State *L) {
     lua_setfield(L, LUA_REGISTRYINDEX, "LUA_NOENV");
   }
   luaL_openlibs(L);  /* open standard libraries */
+  lua_live_init(L);
   createargtable(L, argv, argc, script);  /* create table 'arg' */
   if (!(args & has_E)) {  /* no option '-E'? */
     if (handle_luainit(L) != LUA_OK)  /* run LUA_INIT */
