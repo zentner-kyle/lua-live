@@ -1,3 +1,6 @@
+src/lua
+src/luac
+
 ### https://raw.github.com/github/gitignore/master/Global/vim.gitignore
 
 [._]*.s[a-w][a-z]
